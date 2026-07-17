@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "stl": {
+      "starterGcode": "",
+      "swapTailGcode": ""
+    },
+    "compatibility": {
+      "starterGcode": "",
+      "swapTailGcode": ""
+    }
+  }
+}

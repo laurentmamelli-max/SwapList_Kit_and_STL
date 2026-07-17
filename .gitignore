@@ -1,0 +1,13 @@
+out/
+out-official/
+.runtime/
+.build/
+dist/
+.pycache/
+__pycache__/
+.DS_Store
+Archive.zip
+.tmp-*/
+engine/runtime/
+*.pyc
+result.json
