@@ -23,6 +23,8 @@
 @property (nonatomic, strong) NSURL *serverURL;
 @property (nonatomic, strong) NSURL *bundleIndexURL;
 @property (nonatomic, strong) ProcessRunner *processRunner;
+@property (nonatomic, assign) BOOL interfaceReady;
+@property (nonatomic, copy) NSArray<NSDictionary *> *pendingImportPayloads;
 @end
 
 @implementation ProcessRunner
@@ -479,15 +481,36 @@
         return;
     }
 
+    if (!self.interfaceReady) {
+        self.pendingImportPayloads = payloads;
+        [self postNativeStatusBadge:@"Attente"
+                              title:@"Interface en cours de chargement"
+                            message:@"Les fichiers sont prets et seront ajoutes des que l'interface locale sera disponible."
+                               busy:YES];
+        return;
+    }
+
     NSData *jsonData = [NSJSONSerialization dataWithJSONObject:payloads options:0 error:nil];
     if (!jsonData) {
         return;
     }
 
     NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-    NSString *script = [NSString stringWithFormat:@"window.__swapmodImportFromNative(%@);", jsonString ?: @"[]"];
+    NSString *script = [NSString stringWithFormat:
+        @"(function () {"
+         "  if (typeof window.__swapmodImportFromNative !== 'function') {"
+         "    return false;"
+         "  }"
+         "  Promise.resolve(window.__swapmodImportFromNative(%@)).catch(function (error) {"
+         "    console.error('swapmod native import failed', error);"
+         "  });"
+         "  return true;"
+         "})();",
+        jsonString ?: @"[]"
+    ];
     [self.webView evaluateJavaScript:script completionHandler:^(id _Nullable result, NSError * _Nullable error) {
-        if (error) {
+        BOOL injected = [result respondsToSelector:@selector(boolValue)] ? [result boolValue] : NO;
+        if (error || !injected) {
             self.helperLabel.stringValue = @"Import natif impossible";
             [self postNativeStatusBadge:@"Erreur"
                                   title:@"Import impossible"
@@ -504,6 +527,10 @@
 }
 
 - (void)presentNativeFilePicker {
+    [self presentNativeFilePickerWithCompletionHandler:nil];
+}
+
+- (void)presentNativeFilePickerWithCompletionHandler:(void (^)(NSArray<NSURL *> * _Nullable URLs))completionHandler {
     NSOpenPanel *panel = [NSOpenPanel openPanel];
     panel.canChooseFiles = YES;
     panel.canChooseDirectories = NO;
@@ -513,6 +540,9 @@
 
     [panel beginSheetModalForWindow:self.window completionHandler:^(NSModalResponse result) {
         if (result != NSModalResponseOK) {
+            if (completionHandler) {
+                completionHandler(nil);
+            }
             [self clearNativeStatus];
             return;
         }
@@ -573,6 +603,9 @@
                                           title:@"Import impossible"
                                         message:firstError.localizedDescription ?: @"Aucun fichier importable n'a ete produit."
                                            busy:NO];
+                    if (completionHandler) {
+                        completionHandler(nil);
+                    }
                     return;
                 }
 
@@ -581,6 +614,9 @@
                                     message:[NSString stringWithFormat:@"%lu fichier(s) pret(s), ajout a la queue en cours...", (unsigned long)payloads.count]
                                        busy:YES];
                 [self injectFilesIntoWebView:payloads];
+                if (completionHandler) {
+                    completionHandler(nil);
+                }
             });
         });
     }];
@@ -630,8 +666,15 @@
 
 - (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
     self.loadingLabel.hidden = YES;
+    self.interfaceReady = YES;
     self.helperLabel.stringValue = @"Pret";
     [self clearNativeStatus];
+
+    if (self.pendingImportPayloads.count) {
+        NSArray<NSDictionary *> *payloads = self.pendingImportPayloads;
+        self.pendingImportPayloads = nil;
+        [self injectFilesIntoWebView:payloads];
+    }
 }
 
 - (IBAction)openInBrowser:(id)sender {
@@ -672,8 +715,7 @@
 runOpenPanelWithParameters:(WKOpenPanelParameters *)parameters
 initiatedByFrame:(WKFrameInfo *)frame
 completionHandler:(void (^)(NSArray<NSURL *> * _Nullable URLs))completionHandler {
-    [self presentNativeFilePicker];
-    completionHandler(nil);
+    [self presentNativeFilePickerWithCompletionHandler:completionHandler];
 }
 
 - (void)userContentController:(WKUserContentController *)userContentController
