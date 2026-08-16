@@ -11,3 +11,9 @@ Archive.zip
 engine/runtime/
 *.pyc
 result.json
+Archive/
+NEXT_STEPS.md
+PROJECT_STATE.md
+TESTING.md
+Swapmod-sources*.zip
+swapmod.zip

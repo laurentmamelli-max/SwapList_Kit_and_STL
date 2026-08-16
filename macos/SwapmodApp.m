@@ -245,7 +245,7 @@
     if (![[NSFileManager defaultManager] fileExistsAtPath:self.nativeSlicerCLIURL.path]) {
         if (error) {
             *error = [NSError errorWithDomain:@"SwapmodLocal" code:12 userInfo:@{
-                NSLocalizedDescriptionKey: @"Le slicer natif est introuvable dans le bundle."
+                NSLocalizedDescriptionKey: @"Le convertisseur local est introuvable dans le bundle."
             }];
         }
         return nil;
@@ -276,7 +276,7 @@
     if (![[NSFileManager defaultManager] fileExistsAtPath:outputURL.path]) {
         if (error) {
             *error = [NSError errorWithDomain:@"SwapmodLocal" code:13 userInfo:@{
-                NSLocalizedDescriptionKey: merged.length ? merged : @"Le slicer natif n'a pas genere de G-code."
+                NSLocalizedDescriptionKey: merged.length ? merged : @"La conversion locale n'a pas genere de G-code exploitable."
             }];
         }
         return nil;
@@ -315,7 +315,6 @@
 }
 
 - (void)applicationWillTerminate:(NSNotification *)notification {
-    [self.processRunner stopServer];
 }
 
 - (void)createWindow {
@@ -346,7 +345,7 @@
     titleField.textColor = [NSColor colorWithCalibratedRed:0.12 green:0.14 blue:0.13 alpha:1.0];
     titleField.translatesAutoresizingMaskIntoConstraints = NO;
 
-    self.helperLabel = [NSTextField labelWithString:@"Loading bundled app..."];
+    self.helperLabel = [NSTextField labelWithString:@"Chargement de l'interface locale..."];
     self.helperLabel.font = [NSFont systemFontOfSize:13 weight:NSFontWeightMedium];
     self.helperLabel.textColor = [NSColor colorWithCalibratedRed:0.35 green:0.40 blue:0.39 alpha:1.0];
     self.helperLabel.translatesAutoresizingMaskIntoConstraints = NO;
@@ -363,23 +362,21 @@
     self.webView.layer.cornerRadius = 22;
     self.webView.layer.masksToBounds = YES;
 
-    self.loadingLabel = [NSTextField labelWithString:@"Loading app..."];
+    self.loadingLabel = [NSTextField labelWithString:@"Chargement..."];
     self.loadingLabel.font = [NSFont systemFontOfSize:18 weight:NSFontWeightSemibold];
     self.loadingLabel.textColor = [NSColor colorWithCalibratedRed:0.10 green:0.43 blue:0.34 alpha:1.0];
     self.loadingLabel.alignment = NSTextAlignmentCenter;
     self.loadingLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
-    NSButton *addFilesButton = [self makeHeaderButtonWithTitle:@"Add Files" action:@selector(addFiles:)];
-    NSButton *aboutButton = [self makeHeaderButtonWithTitle:@"About / Engine" action:@selector(showAboutPanel:)];
-    NSButton *openBrowserButton = [self makeHeaderButtonWithTitle:@"Open in Browser" action:@selector(openInBrowser:)];
-    NSButton *reloadButton = [self makeHeaderButtonWithTitle:@"Reload" action:@selector(reloadPage:)];
+    NSButton *addFilesButton = [self makeHeaderButtonWithTitle:@"Ajouter" action:@selector(addFiles:)];
+    NSButton *aboutButton = [self makeHeaderButtonWithTitle:@"A propos" action:@selector(showAboutPanel:)];
+    NSButton *reloadButton = [self makeHeaderButtonWithTitle:@"Actualiser" action:@selector(reloadPage:)];
 
     [contentView addSubview:header];
     [header addSubview:titleField];
     [header addSubview:self.helperLabel];
     [header addSubview:addFilesButton];
     [header addSubview:aboutButton];
-    [header addSubview:openBrowserButton];
     [header addSubview:reloadButton];
     [contentView addSubview:self.webView];
     [contentView addSubview:self.loadingLabel];
@@ -399,10 +396,7 @@
         [reloadButton.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-18],
         [reloadButton.centerYAnchor constraintEqualToAnchor:header.centerYAnchor],
 
-        [openBrowserButton.trailingAnchor constraintEqualToAnchor:reloadButton.leadingAnchor constant:-10],
-        [openBrowserButton.centerYAnchor constraintEqualToAnchor:header.centerYAnchor],
-
-        [aboutButton.trailingAnchor constraintEqualToAnchor:openBrowserButton.leadingAnchor constant:-10],
+        [aboutButton.trailingAnchor constraintEqualToAnchor:reloadButton.leadingAnchor constant:-10],
         [aboutButton.centerYAnchor constraintEqualToAnchor:header.centerYAnchor],
 
         [addFilesButton.trailingAnchor constraintEqualToAnchor:aboutButton.leadingAnchor constant:-10],
@@ -475,7 +469,7 @@
 
 - (void)clearNativeStatus {
     dispatch_async(dispatch_get_main_queue(), ^{
-        self.helperLabel.stringValue = @"Ready";
+        self.helperLabel.stringValue = @"Pret";
         [self.webView evaluateJavaScript:@"window.__swapmodClearNativeStatus();" completionHandler:nil];
     });
 }
@@ -515,7 +509,7 @@
     panel.canChooseDirectories = NO;
     panel.allowsMultipleSelection = YES;
     panel.resolvesAliases = YES;
-    panel.message = @"Choisis un ou plusieurs fichiers .3mf ou .gcode.3mf";
+    panel.message = @"Choisis un ou plusieurs fichiers .3mf, .gcode.3mf ou .gcode";
 
     [panel beginSheetModalForWindow:self.window completionHandler:^(NSModalResponse result) {
         if (result != NSModalResponseOK) {
@@ -526,7 +520,7 @@
         self.helperLabel.stringValue = @"Preparation des fichiers...";
         [self postNativeStatusBadge:@"Analyse"
                               title:@"Preparation des fichiers"
-                            message:@"Verification du type de chaque fichier et lancement du slicing si necessaire."
+                            message:@"Verification du type de chaque fichier et conversion locale si necessaire."
                                busy:YES];
 
         dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
@@ -545,9 +539,9 @@
                     ![lowerName hasSuffix:@".swaps.3mf"]
                 ) {
                     rawProjectCount += 1;
-                    [self postNativeStatusBadge:@"Slicing"
-                                          title:[NSString stringWithFormat:@"Slicing automatique %lu/%lu", (unsigned long)rawProjectCount, (unsigned long)panel.URLs.count]
-                                        message:[NSString stringWithFormat:@"Conversion de %@ en .gcode via le moteur natif...", originalURL.lastPathComponent]
+                    [self postNativeStatusBadge:@"Conversion"
+                                          title:[NSString stringWithFormat:@"Conversion locale %lu/%lu", (unsigned long)rawProjectCount, (unsigned long)panel.URLs.count]
+                                        message:[NSString stringWithFormat:@"Preparation de %@ avant ajout a la queue...", originalURL.lastPathComponent]
                                            busy:YES];
                     NSError *sliceError = nil;
                     resolvedURL = [self.processRunner sliceProjectWithNativeEngineAtURL:originalURL error:&sliceError];
@@ -615,7 +609,7 @@
             return;
         }
 
-        self.helperLabel.stringValue = [NSString stringWithFormat:@"Sauve: %@", panel.URL.lastPathComponent];
+        self.helperLabel.stringValue = [NSString stringWithFormat:@"Enregistre: %@", panel.URL.lastPathComponent];
     }];
 }
 
@@ -629,14 +623,14 @@
         return;
     }
 
-    self.helperLabel.stringValue = @"Running bundled app";
+    self.helperLabel.stringValue = @"Interface locale embarquee";
     [self.webView loadFileURL:indexURL allowingReadAccessToURL:[self.processRunner.appRootURL URLByAppendingPathComponent:@"web" isDirectory:YES]];
     self.webView.hidden = NO;
 }
 
 - (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
     self.loadingLabel.hidden = YES;
-    self.helperLabel.stringValue = @"Ready";
+    self.helperLabel.stringValue = @"Pret";
     [self clearNativeStatus];
 }
 
@@ -660,37 +654,15 @@
 }
 
 - (IBAction)showAboutPanel:(id)sender {
-    NSDictionary *engine = [self.processRunner engineStatus];
-    BOOL hasEmbedded = [engine[@"hasEmbedded"] boolValue];
-    BOOL hasSystem = [engine[@"hasSystem"] boolValue];
-    NSString *activePath = engine[@"activePath"];
-    NSString *engineKind = engine[@"engineKind"];
-    NSString *engineName = engine[@"engineName"];
-    NSString *mode = hasEmbedded ? @"Embedded headless runtime" : (hasSystem ? @"System fallback" : @"No slicer engine");
-    NSString *embeddedStatus = hasEmbedded ? @"Yes" : @"No";
-    NSString *systemStatus = hasSystem ? @"Yes" : @"No";
-    NSString *embeddedSize = hasEmbedded ? [self formattedByteCount:[engine[@"embeddedSize"] unsignedLongLongValue]] : @"n/a";
-
     NSAlert *alert = [NSAlert new];
     alert.alertStyle = NSAlertStyleInformational;
     alert.messageText = @"Swapmod Local";
     alert.informativeText = [NSString stringWithFormat:
-        @"Version: 1.0\n"
-        @"Mode: %@\n"
-        @"Embedded engine: %@\n"
-        @"Engine name: %@\n"
-        @"Engine kind: %@\n"
-        @"Embedded size: %@\n"
-        @"System Bambu Studio available: %@\n"
-        @"Active slicer path:\n%@\n\n"
-        @"This app prefers the packaged headless runtime and falls back to the system app only when needed.",
-        mode,
-        embeddedStatus,
-        engineName.length ? engineName : @"n/a",
-        engineKind.length ? engineKind : @"n/a",
-        embeddedSize,
-        systemStatus,
-        activePath.length ? activePath : @"Unavailable"
+        @"Version locale inspiree de swaplist.app.\n\n"
+        @"Les deux piliers du projet sont:\n"
+        @"- Swapmod KIT\n"
+        @"- Swapmod STL\n\n"
+        @"L'app embarque directement l'interface locale et peut preparer certains .3mf bruts avant ajout a la queue."
     ];
     [alert addButtonWithTitle:@"OK"];
     [alert beginSheetModalForWindow:self.window completionHandler:nil];

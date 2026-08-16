@@ -205,7 +205,7 @@ def open_url(url):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(description="Launch and manage the Swapmod local web app.")
+    parser = argparse.ArgumentParser(description="Launch and manage the local Swapmod KIT/STL web app.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     serve_parser = subparsers.add_parser("serve", help="Run the local HTTP server in the foreground.")

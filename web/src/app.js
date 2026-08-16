@@ -54,21 +54,21 @@
       label: "KIT",
       extension: ".swap.3mf",
       platerName: "SWAP",
-      help: "Profil kit officiel, sortie en .swap.3mf."
+      help: "Pilier KIT: sortie en .swap.3mf."
     },
     stl: {
       key: "stl",
       label: "STL",
       extension: ".swaps.3mf",
       platerName: "SWAPS",
-      help: "Profil assemblage complet, sortie en .swaps.3mf."
+      help: "Pilier STL: sortie en .swaps.3mf."
     }
   };
   const NATIVE_STATUS_MESSAGES = {
     idle: {
-      badge: "Pret",
-      title: "Aucune tache en cours",
-      message: "Dans l'app macOS, les .3mf bruts peuvent etre slices automatiquement via le moteur natif."
+      badge: "Local",
+      title: "Pret a importer",
+      message: "Dans l'app macOS, les .3mf bruts peuvent etre convertis automatiquement avant ajout a la queue."
     }
   };
 
@@ -136,7 +136,7 @@
     window.__swapmodSetNativeStatus = setNativeStatusFromNative;
     window.__swapmodClearNativeStatus = clearNativeStatusFromNative;
 
-    setProgress(0, "Idle");
+    setProgress(0, "Pret");
     applyNativeCapabilityCopy();
     clearNativeStatusFromNative();
     renderAll();
@@ -182,9 +182,9 @@
   function applyNativeCapabilityCopy() {
     if (hasNativeBridge()) {
       ui.dropzoneSubtitle.textContent =
-        "ou clique pour selectionner des .3mf / .gcode.3mf / .gcode. Les .3mf bruts seront slices automatiquement.";
+        "ou clique pour selectionner des .3mf / .gcode.3mf / .gcode. Les .3mf bruts seront convertis automatiquement.";
       ui.formatGuidance.textContent =
-        "Formats acceptes dans l'app macOS: .gcode.3mf, .gcode et .3mf bruts via slicing automatique du moteur natif.";
+        "Dans l'app macOS: .gcode.3mf, .gcode et .3mf bruts sont acceptes.";
       ui.nativeStatus.hidden = false;
       return;
     }
@@ -192,7 +192,7 @@
     ui.dropzoneSubtitle.textContent =
       "ou clique pour selectionner des .3mf / .gcode.3mf / .gcode";
     ui.formatGuidance.textContent =
-      "Formats recommandes dans le navigateur: .gcode.3mf ou .gcode. Les .3mf bruts doivent d'abord etre slices.";
+      "Dans le navigateur: prefere .gcode.3mf ou .gcode. Les .3mf bruts doivent etre convertis avant import.";
     ui.nativeStatus.hidden = true;
   }
 
@@ -263,7 +263,7 @@
       }
     }
 
-    setProgress(0, "Idle");
+    setProgress(0, "Pret");
     renderAll();
   }
 
@@ -486,16 +486,9 @@
       missingLabel +
       ").";
 
-    if (state.profileMode === "stl") {
-      return (
-        baseMessage +
-        " Le mode STL local n'accepte pas encore les projets .3mf bruts. Exporte d'abord un fichier slice .gcode.3mf depuis Bambu Studio ou Orca Slicer."
-      );
-    }
-
     return (
       baseMessage +
-      " Exporte d'abord un fichier slice .gcode.3mf depuis Bambu Studio ou Orca Slicer."
+      " Dans le navigateur, importe un .gcode.3mf ou un .gcode. Dans l'app macOS, ajoute directement le .3mf brut pour laisser la conversion locale faire le travail."
     );
   }
 
@@ -1018,7 +1011,7 @@
       logLine("Export termine: " + outputName + profile.extension);
       setProgress(100, "Export termine");
       window.setTimeout(function () {
-        setProgress(0, "Idle");
+        setProgress(0, "Pret");
       }, 1200);
     } catch (error) {
       logLine("Export impossible: " + error.message);
@@ -1463,7 +1456,7 @@
       input.checked = input.value === "kit";
     });
     ui.logOutput.textContent = "Application reinitialisee.";
-    setProgress(0, "Idle");
+    setProgress(0, "Pret");
     renderAll();
   }
 

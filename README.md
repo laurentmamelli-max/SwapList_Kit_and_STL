@@ -1,48 +1,58 @@
-# Swapmod local
+# Swapmod Local
 
-Workspace de test pour deux choses:
+Version locale inspiree de `swaplist.app`, recentree sur deux piliers:
 
-- une demo Java autour de l'ancienne lib `SwapList`
-- une web app locale pour generer des fichiers `.swap.3mf` inspiree de `swaplist.app`
+- `Swapmod KIT` pour produire des fichiers `.swap.3mf`
+- `Swapmod STL` pour produire des fichiers `.swaps.3mf`
 
-## Lancer la web app locale
+Le but du projet est de prendre des projets Bambu/Orca, construire une queue localement, puis exporter un seul fichier final pret a etre reinjecte.
+
+## Les deux piliers
+
+### Swapmod KIT
+
+- mode principal pour les usages `KIT`
+- sortie en `.swap.3mf`
+- options de queue conservees: repetitions, attente avant swap, dernier plateau, calibration unique
+
+### Swapmod STL
+
+- mode principal pour les usages `STL`
+- sortie en `.swaps.3mf`
+- option de compatibilite `KIT` conservee quand necessaire
+
+## Ce que fait l'app locale
+
+- importe des fichiers `.gcode.3mf`, `.gcode` et certains projets `.3mf`
+- extrait les plates, temps d'impression, apercus et stats filament
+- permet de reordonner la queue et regler les repetitions
+- exporte un fichier final selon le pilier choisi
+- fonctionne localement, sans backend distant
+- dans l'app macOS, les `.3mf` bruts peuvent etre prepares automatiquement avant ajout a la queue
+
+## Demarrage rapide
+
+### Version navigateur
 
 ```bash
 ./run_web_app.sh
 ```
 
-Puis ouvrir [http://127.0.0.1:4173](http://127.0.0.1:4173)
+Puis ouvre [http://127.0.0.1:4173](http://127.0.0.1:4173)
 
-## Lancer comme executable macOS
-
-Option simple par double-clic:
-
-- [Launch Swapmod Local.command](/Users/laurent/Documents/swapmod/Launch%20Swapmod%20Local.command)
-- [Stop Swapmod Local.command](/Users/laurent/Documents/swapmod/Stop%20Swapmod%20Local.command)
-
-Option app macOS native:
+### Version macOS
 
 ```bash
 ./build_macos_app.sh
 ```
 
-Cela cree une vraie app macOS avec:
+Cela cree:
 
-- une fenetre native `WKWebView`
-- les ressources web embarquees dans l'app
-- un runtime de slicing headless embarque s'il existe dans `engine/runtime/headless`
-- un fallback vers `BambuStudio.app` systeme si le runtime headless n'est pas encore packagé
-- un bouton `About / Engine` pour verifier si le moteur embarque est actif
-- une icone `.icns`
 - `dist/Swapmod Local.app`
 
-Quand tu importes un `.3mf` brut dans l'app macOS:
+L'app charge l'interface directement depuis son bundle. Aucun serveur n'est necessaire pour l'utiliser.
 
-- l'app le tranche automatiquement avec `swapmod_native_slicer.py`
-- elle injecte ensuite le G-code genere directement dans la queue
-- il n'y a plus besoin d'un `.gcode.3mf` prepare a la main pour ce flux
-
-Option DMG:
+### DMG
 
 ```bash
 ./build_dmg.sh
@@ -52,146 +62,31 @@ Cela cree:
 
 - `dist/Swapmod-Local.dmg`
 
-L'app native charge l'interface embarquee directement dans la fenetre desktop. Les scripts `.command` restent disponibles si tu preferes un lancement plus simple via le navigateur.
+## Formats
 
-## CLI de slicing headless
+- dans le navigateur: prefere `.gcode.3mf` ou `.gcode`
+- dans l'app macOS: tu peux aussi ajouter un `.3mf` brut
+- mode `KIT`: export `.swap.3mf`
+- mode `STL`: export `.swaps.3mf`
 
-Le wrapper CLI local est :
+## Fichiers importants
 
-```bash
-python3 tools/swapmod_slicer.py status --json
-```
+- [web/index.html](/Users/laurent/Documents/swapmod/web/index.html:1) et [web/src/app.js](/Users/laurent/Documents/swapmod/web/src/app.js:1) : interface locale KIT/STL
+- [macos/SwapmodApp.m](/Users/laurent/Documents/swapmod/macos/SwapmodApp.m:1) : app macOS embarquee
+- [build_macos_app.sh](/Users/laurent/Documents/swapmod/build_macos_app.sh:1) et [build_dmg.sh](/Users/laurent/Documents/swapmod/build_dmg.sh:1) : packaging
 
-Pour slicer un projet :
+## Partie experimentale
 
-```bash
-python3 tools/swapmod_slicer.py slice \
-  --input "/chemin/projet.3mf" \
-  --output-dir "/tmp/swapmod-slice" \
-  --output-name "projet.gcode.3mf"
-```
+La conversion locale des `.3mf` bruts existe pour fluidifier l'import dans l'app macOS, mais ce n'est pas un pilier produit. Les notes techniques restent volontairement separees ici:
 
-Le CLI cherche d'abord un runtime headless dans :
+- [engine/native/README.md](/Users/laurent/Documents/swapmod/engine/native/README.md:1)
 
-- `engine/runtime/headless`
-- le bundle de l'app macOS
-
-Puis il bascule vers `BambuStudio.app` dans `/Applications` seulement en fallback.
-
-## Construire et packager un runtime headless
-
-Packager un runtime minimal a partir d'un bundle BambuStudio existant :
-
-```bash
-./tools/package_headless_runtime.sh /Applications/BambuStudio.app \
-  /Users/laurent/Documents/swapmod/engine/runtime/headless
-```
-
-Guide de build source officiel automatise localement :
-
-```bash
-./tools/build_headless_engine.sh
-```
-
-Le runtime headless conserve seulement le binaire et les ressources utiles au slicing :
-
-- `profiles`
-- `printers`
-- `data`
-- `info`
-- `cert`
-- `shaders`
-- `fonts`
-- quelques ressources de support compactes
-
-## Nouveau moteur natif maison
-
-On a aussi demarre un vrai moteur interne, pour ne plus dependre a terme d'un slicer amont :
-
-```bash
-python3 tools/swapmod_native_slicer.py inspect \
-  --input /Users/laurent/Documents/swapmod/examples/native-engine/unit_cube_ascii.stl
-
-python3 tools/swapmod_native_slicer.py slice-plan \
-  --input /Users/laurent/Documents/swapmod/examples/native-engine/unit_cube_ascii.stl \
-  --layer-height 0.2
-```
-
-Ce moteur sait deja :
-
-- parser `STL`
-- parser un `3MF` simple ou a `components`
-- calculer un plan de coupe couche par couche
-- reconstruire des contours fermes simples
-- generer un premier G-code `perimeters-only`
-
-Exemple :
-
-```bash
-python3 tools/swapmod_native_slicer.py slice-gcode \
-  --input /Users/laurent/Documents/swapmod/examples/native-engine/unit_cube_ascii.stl \
-  --output /Users/laurent/Documents/swapmod/out/native-engine/unit-cube.gcode \
-  --layer-height 0.2
-```
-
-Sortie testee :
-
-- [unit-cube.gcode](/Users/laurent/Documents/swapmod/out/native-engine/unit-cube.gcode:1)
-
-Ce moteur ne remplace pas encore Bambu Studio :
-
-- pas d'infill
-- pas de supports
-- pas d'AMS
-- pas encore de profil machine Bambu complet
-
-Mais c'est maintenant une vraie base `mesh -> couches -> contours -> G-code`.
-
-## Ce que fait la web app
-
-- importe des fichiers `.3mf`, `.gcode.3mf` ou `.gcode`
-- extrait les plates, apercus, temps et stats filament
-- permet de reordonner la queue et regler les repetitions
-- gere deux profils:
-  - `KIT` avec sortie `.swap.3mf`
-  - `STL` avec sortie `.swaps.3mf`
-- propose les reglages `wait before swap`, `don't swap last plate`, `vibration calibration only once`
-- propose en mode `STL` une option de compatibilite `KIT`
-- tourne localement dans le navigateur, sans backend
-
-## Limites de cette version locale
+## Limites
 
 - c'est une reimplementation locale inspiree de `swaplist.app`, pas une copie officielle
-- pas de mode live pendant l'impression
-- le flux vise Bambu/Orca au format 3MF zippe avec les metadonnees habituelles
-- il faut tester avec prudence sur machine reelle
-- l'app macOS reste basee sur la web app locale embarquee; ce n'est pas une reimplementation Electron
-- le runtime headless reduit fortement la taille par rapport a un bundle Bambu complet, mais il reste a valider fichier reel par fichier reel
-- si tu redistribues une version avec moteur Bambu/Prusa/Orca derive, pense aux obligations de licence AGPL/GPL du moteur amont
+- les exports doivent etre verifies prudemment avant usage machine reelle
+- le flux cible des projets Bambu/Orca au format 3MF zippe
 
-## Lancer la demo
+## Archive legacy
 
-```bash
-./run_demo.sh
-```
-
-## Lancer la demo avec le jar officiel
-
-```bash
-./run_official_jar_demo.sh
-```
-
-## Ce que fait la demo
-
-- cree un `SwapList<String>` avec 500 elements max par page
-- ajoute 5000 elements
-- relit le premier et le dernier element
-- verifie qu'un fichier de swap existe pendant l'utilisation
-- verifie que les fichiers temporaires sont supprimes apres `close()`
-
-## Notes
-
-- les elements stockes doivent etre `Serializable`
-- cette version est volontairement minimale: les operations principales `add`, `get`, `size`, `iterator`, `clear` et `close` sont prevues pour le scenario du README d'origine
-- la lib SourceForge d'origine etait ancienne et incomplete; ici l'objectif est d'avoir une base locale simple qui marche avec un JDK recent
-- le jar officiel `swaplist-bin-0.2.jar` a aussi ete verifie localement
+Le repo contient encore des traces de l'ancien travail autour de `SwapList` Java et d'outils internes. Elles ne font plus partie du parcours produit principal.

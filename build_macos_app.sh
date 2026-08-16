@@ -14,12 +14,10 @@ ICONSET_DIR="$BUILD_DIR/Swapmod.iconset"
 ICON_TOOL="$BUILD_DIR/icon-generator"
 APP_BIN="$MACOS_DIR/Swapmod Local"
 MASTER_TIFF="$BUILD_DIR/AppIcon.tiff"
-EMBEDDED_ENGINE_DIR="$SUPPORT_DIR/engines"
-HEADLESS_RUNTIME_SOURCE="$ROOT_DIR/engine/runtime/headless"
 
 mkdir -p "$DIST_DIR" "$BUILD_DIR"
 rm -rf "$APP_DIR" "$ICONSET_DIR"
-mkdir -p "$MACOS_DIR" "$RESOURCES_DIR" "$SUPPORT_DIR/tools" "$SUPPORT_DIR/web" "$EMBEDDED_ENGINE_DIR"
+mkdir -p "$MACOS_DIR" "$RESOURCES_DIR" "$SUPPORT_DIR/tools" "$SUPPORT_DIR/web"
 
 clang -fobjc-arc \
   -framework Cocoa \
@@ -35,20 +33,9 @@ clang -fobjc-arc \
   "$ROOT_DIR/macos/SwapmodApp.m" \
   -o "$APP_BIN"
 
-cp "$ROOT_DIR/tools/serve_swapmod.py" "$SUPPORT_DIR/tools/serve_swapmod.py"
-cp "$ROOT_DIR/tools/swapmod_slicer.py" "$SUPPORT_DIR/tools/swapmod_slicer.py"
 cp "$ROOT_DIR/tools/swapmod_native_slicer.py" "$SUPPORT_DIR/tools/swapmod_native_slicer.py"
 cp -R "$ROOT_DIR/web/." "$SUPPORT_DIR/web/"
-chmod +x "$SUPPORT_DIR/tools/serve_swapmod.py"
-chmod +x "$SUPPORT_DIR/tools/swapmod_slicer.py"
 chmod +x "$SUPPORT_DIR/tools/swapmod_native_slicer.py"
-
-if [ -d "$HEADLESS_RUNTIME_SOURCE" ] && [ -f "$HEADLESS_RUNTIME_SOURCE/engine.json" ]; then
-  echo "Embedding headless slicer runtime..."
-  cp -R "$HEADLESS_RUNTIME_SOURCE" "$EMBEDDED_ENGINE_DIR/headless"
-else
-  echo "Headless slicer runtime not found in engine/runtime/headless; app will rely on system fallback if available."
-fi
 
 cat > "$CONTENTS_DIR/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>

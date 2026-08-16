@@ -1,59 +1,38 @@
-## Native slicer engine
+## Notes internes - conversion locale 3MF
 
-Ce dossier lance un vrai moteur maison pour `Swapmod`, sans dependre d'un slicer tiers.
+Cette partie ne fait pas partie des deux piliers produit `Swapmod KIT` et `Swapmod STL`.
+Elle sert uniquement de support technique pour fluidifier l'import local dans l'app macOS.
 
-### Portee du premier jalon
+En pratique:
 
-Le moteur natif actuel sait :
+- un `.3mf` brut peut etre prepare localement avant ajout a la queue
+- le point d'entree reste `/Users/laurent/Documents/swapmod/tools/swapmod_native_slicer.py`
+- ce flux doit etre considere comme interne et evolutif
 
-- lire un mesh depuis `STL`
-- lire un `3MF` simple ou a `components`
-- calculer un plan de coupe couche par couche
-- compter les segments d'intersection par couche
+### Ce que le pipeline sait deja faire
+
+- lire des meshes `STL`
+- lire certains `3MF`, y compris avec `components`
+- calculer un plan de coupe simple
 - reconstruire des contours fermes simples
-- produire un premier G-code `perimeters-only`
+- generer plusieurs perimetres
+- generer un infill rectiligne simple
+- sortir un premier G-code exploitable pour la conversion locale
 
-Il ne sait pas encore :
+### Ce que cette partie n'est pas
 
-- reconstruire des contours fermes
-- generer l'infill
-- ajouter les supports
-- produire un G-code imprimable complet
+- ce n'est pas un pilier produit
+- ce n'est pas encore un remplaçant complet de Bambu Studio
+- ce n'est pas l'axe principal de distribution du repo
 
-### CLI
-
-Le point d'entree est :
-
-- `/Users/laurent/Documents/swapmod/tools/swapmod_native_slicer.py`
-
-Exemples :
+### Exemples internes
 
 ```bash
 python3 tools/swapmod_native_slicer.py inspect \
   --input /Users/laurent/Documents/swapmod/examples/native-engine/unit_cube_ascii.stl
-
-python3 tools/swapmod_native_slicer.py slice-plan \
-  --input /Users/laurent/Documents/swapmod/examples/native-engine/unit_cube_ascii.stl \
-  --layer-height 0.2
 
 python3 tools/swapmod_native_slicer.py slice-gcode \
   --input /Users/laurent/Documents/swapmod/examples/native-engine/unit_cube_ascii.stl \
   --output /Users/laurent/Documents/swapmod/out/native-engine/unit-cube.gcode \
   --layer-height 0.2
 ```
-
-### Intention
-
-L'objectif n'est plus de porter Bambu Studio en plus petit. L'objectif est de construire
-un moteur propre, cible, maitrise, oriente `Swapmod` et Bambu A1 / A1 mini.
-
-### Limites du G-code actuel
-
-Le G-code genere aujourd'hui est volontairement minimal :
-
-- perimetres seulement
-- pas d'infill
-- pas de supports
-- pas de gestion AMS
-- pas encore de start/end G-code specifiques Bambu
-- utile comme preuve de pipeline, pas encore comme remplaçant complet de Bambu Studio
